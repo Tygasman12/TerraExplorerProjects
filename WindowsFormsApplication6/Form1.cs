@@ -14,27 +14,25 @@ namespace WindowsFormsApplication6
 
     public partial class Form1 : Form
     {
-        private SGWorld65 globe;
-        private SGWorld66 globe1;
+        private SGWorld66 globe;
         private DateTime savedTime;
         private double MoveDistance, TiltDistance;
-        private IPosition65 curPos;
-        private ITerrainModel65 MissleObj;
-        private ITerrainRegularPolygon65 CircleObj;
-        private ITerrainEffect66 explo;
-        private _ISGWorld65Events_OnFrameEventHandler myOnFrameEventHandler;
-
-
+        private IPosition66 curPos;
+        private _ISGWorld66Events_OnFrameEventHandler myOnFrameEventHandler;
+        private List<string> MissileObjects = new List<string>();
+        private List<string> MissileIDs = new List<string>();
+        private bool iscameraPOV = true;
+         
         public Form1()
         {
             InitializeComponent();
-            globe = new SGWorld65();
-            globe1 = new SGWorld66();
-
+            globe = new SGWorld66();
+     
             MoveDistance = 250;
             TiltDistance = 5;
 
-            myOnFrameEventHandler = new _ISGWorld65Events_OnFrameEventHandler(TE_OnFrame);
+            myOnFrameEventHandler = new _ISGWorld66Events_OnFrameEventHandler(TE_OnFrame);
+            globe.OnFrame += myOnFrameEventHandler;
 
         }
         private const string EffectXML = @"$$PARTICLE$$UserDefine: 
@@ -103,19 +101,13 @@ namespace WindowsFormsApplication6
                     <Color Value='20,210,170,145' />
                     <Size Value='4.1,4.1' />
                     <Drag Value='0' />
-                    <Blend Type='' />
+                    <Blend Typ;e='' />
                     <Fade FadeIn='0.22' FadeOut='0.3' MaxFade='0.13' />
                     </ParticleEmitter>
                     </Particle>";
 
         private void TE_OnFrame()
         {
-
-
-
-
-            var wpt = globe.Window.CenterPixelToWorld(WorldPointType.WPT_TERRAIN).Position;
-            var wpt1 = globe1.Window.CenterPixelToWorld(WorldPointType.WPT_TERRAIN).Position;
 
             DateTime now = DateTime.Now;
             TimeSpan timeDifference = now.Subtract(savedTime);
@@ -124,34 +116,88 @@ namespace WindowsFormsApplication6
             double ftPerSecond = 500.0;
 
             double distance = ftPerSecond * (timeDifference.Milliseconds / 1000.0);
-
-            IPosition65 newPosition = MissleObj.Position.Move(distance, curPos.Yaw, curPos.Pitch);
-            MissleObj.Position = newPosition;
-            if (MissleObj.Position.AltitudeType == AltitudeTypeCode.ATC_TERRAIN_ABSOLUTE)
+            for (int i = 0; i < MissileIDs.Count; i++)
             {
-                IPosition65 clone = newPosition.Copy();
-                clone = clone.ToRelative(AccuracyLevel.ACCURACY_NORMAL);
-                if (clone.Altitude <= 0.0)
-                {
-                    explo = globe1.Creator.CreateEffect(wpt1, EffectsXML = EffectXML, "", "Explosion");
-                    CircleObj = globe.Creator.CreateCircle(wpt, 15.0, LineColor = Color.Red, FillColor = Color.Red, "", "Circle");
-                    globe.OnFrame -= myOnFrameEventHandler;
-                }
-            }
+                IPosition66 newPosition = null;
 
+                ITerrainModel66 MissleObj = (ITerrainModel66) globe.Creator.GetObject(MissileIDs[i]);
+                double distanceTo = System.Convert.ToDouble(MissleObj.ClientData["Distancetoground"]);
+                if (distanceTo <= distance)
+                {
+                    newPosition = MissleObj.Position.Move(distanceTo, MissleObj.Position.Yaw, MissleObj.Position.Pitch);
+                    newPosition.AltitudeType = AltitudeTypeCode.ATC_ON_TERRAIN;
+                    newPosition.Altitude = 0;
+                    ITerrainEffect66 explo = globe.Creator.CreateEffect(newPosition, EffectsXML = EffectXML, "", "Explosion");
+                    MissileObjects.Add(explo.ID);
+                    ITerrainRegularPolygon66 CircleObj = globe.Creator.CreateCircle(newPosition, 15.0, LineColor = Color.Red, FillColor = Color.Red, "", "Circle");
+                    MissileObjects.Add(CircleObj.ID);
+                    globe.ProjectTree.DeleteItem(MissileIDs[i]);
+                    MissileIDs.RemoveAt(i);
+                    i--;
+                }
+                else
+                {
+                    newPosition = MissleObj.Position.Move(distance, MissleObj.Position.Yaw, MissleObj.Position.Pitch);
+                    MissleObj.Position = newPosition;
+                    if (MissleObj.Position.Roll < 359.0)
+                    {
+                        MissleObj.Position.Roll += 6.0;
+                    }
+                    else
+                    {
+
+                        MissleObj.Position.Roll = 0.0;
+                    }
+                    //MissleObj.Position.Roll = (MissleObj.Position.Roll < 359.0 ? MissleObj.Position.Roll += 1.0 : 0.0);
+
+
+                    MissleObj.ClientData["Distancetoground"] = (distanceTo - distance).ToString();
+                }
+
+            }
+            if (MissileIDs.Count > 0)
+            {
+
+                if (!iscameraPOV)
+                {
+                    globe.Navigate.JumpTo(MissileIDs[MissileIDs.Count - 1]);
+                }
+               
+            }
         }
 
-        
+        private void Fire_(object sender, EventArgs e)
+        {
+            var wpt = globe.Window.CenterPixelToWorld(WorldPointType.WPT_TERRAIN);
+            
+            curPos = globe.Navigate.GetPosition(AltitudeTypeCode.ATC_TERRAIN_ABSOLUTE);
+            double distanceTo = curPos.DistanceTo(wpt.Position);
 
-       
+            string FullPathName;
 
+            //FullPathName = @"C:\Program Files (x86)\Skyline\TerraExplorer Pro\Tools\Data-Library\3D-Objects\AirPlanes\f15.xpc";
+            FullPathName = @"C:\Users\Skyline\Desktop\model.dae";
+            ITerrainModel66 MissleObj = globe.Creator.CreateModel(curPos, FullPathName, 5, ModelTypeCode.MT_NORMAL, "", "Missle");
+            MissileIDs.Add(MissleObj.ID);
+            MissleObj.Attachment.AutoDetach = false;
+            MissleObj.Action.Code = ActionCode.AC_FOLLOWBEHIND;
+            MissleObj.ClientData["Distancetoground"] = distanceTo.ToString();
+            savedTime = DateTime.Now;
 
+        }
+        private void Remove_(object sender, EventArgs e)
+        {
+            foreach (var item in MissileObjects)
+            {
+                globe.ProjectTree.DeleteItem(item);
+            }
+            MissileObjects.Clear();
 
-
-
+           
+        }
         private void Forward_(object sender, EventArgs e)
         {
-            IPosition65 newPos;
+            IPosition66 newPos;
             curPos = globe.Navigate.GetPosition(AltitudeTypeCode.ATC_TERRAIN_ABSOLUTE);
             newPos = curPos.Move(MoveDistance, curPos.Yaw, 0);
             newPos.Yaw = curPos.Yaw;
@@ -161,7 +207,7 @@ namespace WindowsFormsApplication6
 
         private void Right_(object sender, EventArgs e)
         {
-            IPosition65 newPos;
+            IPosition66 newPos;
             curPos = globe.Navigate.GetPosition(AltitudeTypeCode.ATC_TERRAIN_ABSOLUTE);
             newPos = curPos.Move(MoveDistance, curPos.Yaw + 90, 0);
             newPos.Yaw = curPos.Yaw;
@@ -171,7 +217,7 @@ namespace WindowsFormsApplication6
 
         private void Backwards_(object sender, EventArgs e)
         {
-            IPosition65 newPos;
+            IPosition66 newPos;
             curPos = globe.Navigate.GetPosition(AltitudeTypeCode.ATC_TERRAIN_ABSOLUTE);
             newPos = curPos.Move(-MoveDistance, curPos.Yaw, 0);
             newPos.Yaw = curPos.Yaw;
@@ -181,7 +227,7 @@ namespace WindowsFormsApplication6
 
         private void Left_(object sender, EventArgs e)
         {
-            IPosition65 newPos;
+            IPosition66 newPos;
             curPos = globe.Navigate.GetPosition(AltitudeTypeCode.ATC_TERRAIN_ABSOLUTE);
             newPos = curPos.Move(MoveDistance, curPos.Yaw - 90, 0);
             newPos.Yaw = curPos.Yaw;
@@ -217,30 +263,12 @@ namespace WindowsFormsApplication6
             globe.Navigate.SetPosition(curPos);
         }
 
-        private void Fire_(object sender, EventArgs e)
-        {
-            curPos = globe.Navigate.GetPosition(AltitudeTypeCode.ATC_TERRAIN_ABSOLUTE);
-
-
-            var wpt = globe.Window.CenterPixelToWorld().Position;
-            var wpt1 = globe1.Window.CenterPixelToWorld().Position;
-            string FullPathName;
-
-            FullPathName = @"C:\Program Files (x86)\Skyline\TerraExplorer Pro\Tools\Data-Library\3D-Objects\AirPlanes\f15.xpc";
-            MissleObj = globe.Creator.CreateModel(curPos, FullPathName, 0.5, ModelTypeCode.MT_NORMAL, "", "Missle");
-
-            savedTime = DateTime.Now;
-
-
-            globe.OnFrame += myOnFrameEventHandler;
-        }
         public Color LineColor { get; set; }
 
         public Color FillColor { get; set; }
 
         public string EffectsXML { get; set; }
 
-       
         private void ZoomOut_(object sender, EventArgs e)
         {
             curPos = globe.Navigate.GetPosition(AltitudeTypeCode.ATC_TERRAIN_ABSOLUTE);
@@ -260,10 +288,27 @@ namespace WindowsFormsApplication6
 
         private void SpeedDown_(object sender, EventArgs e)
         {
-            MoveDistance = MoveDistance - 25;
 
+            MoveDistance = MoveDistance - 25;
         }
 
+        private void  POVChanged_(object sender, EventArgs e)
+        {
+            if (radioButton2.Checked)
+            {
+                iscameraPOV = false;
+            }
+            else
+            {
+                iscameraPOV = true;
+                if (curPos != null)
+                {
+                    globe.Navigate.SetPosition(curPos);
+                }
+            }
+        }
+
+        
 
     }
 }
