@@ -26,19 +26,19 @@ namespace WindowsFormsApplication6
         public Form1()
         {
             InitializeComponent();
-            globe = new SGWorld66();
+            globe = new SGWorld66(); 
      
-            MoveDistance = 250;
-            TiltDistance = 5;
+            MoveDistance = 250; //values for moving the camera
+            TiltDistance = 5; // ""
 
             myOnFrameEventHandler = new _ISGWorld66Events_OnFrameEventHandler(TE_OnFrame);
-            globe.OnFrame += myOnFrameEventHandler;
+            globe.OnFrame += myOnFrameEventHandler; 
 
         }
         private const string EffectXML = @"$$PARTICLE$$UserDefine: 
                      <?xml version='1.0' encoding='UTF-8'?> 
                      <Particle ID='Custom'><ParticleEmitter ID='ring' NumParticles='575' Texture='WhiteSmokeLight.png'>
-                    <Emitter Rate='602' Shape='Sphere' SpeedShape='Sphere' Scale='0,0,0' Speed='1,0.51,1' />
+                    <Emitter Rate='602' Shape='Sphere' SpeedShape='Sphere' Scale='10,10,10' Speed='1,0.51,1' />
                     <Cycle Value='1' />
                     <Sort Value='1' />
                     <Rotation Speed='2' Time='1' Initial='0' />
@@ -49,13 +49,13 @@ namespace WindowsFormsApplication6
                     <Life Value='6.25' />
                     <Speed Value='3.28' />
                     <Color Value='20,200,170,160' />
-                    <Size Value='4,4' />
+                    <Size Value='11,11' />
                     <Drag Value='0' />
                     <Blend Type='' />
                     <Fade FadeIn='0.13' FadeOut='0.06' MaxFade='0.17' />
                     </ParticleEmitter>
                     <ParticleEmitter ID='ring' NumParticles='572' Texture='Dust.png'>
-                    <Emitter Rate='602' Shape='Sphere' SpeedShape='Sphere' Scale='0,0,0' Speed='1,0.76,1' />
+                    <Emitter Rate='602' Shape='Sphere' SpeedShape='Sphere' Scale='10,10,10' Speed='1,0.76,1' />
                     <Cycle Value='1' />
                     <Sort Value='1' />
                     <Rotation Speed='2' Time='3' Initial='1' />
@@ -66,13 +66,13 @@ namespace WindowsFormsApplication6
                     <Life Value='6.25' />
                     <Speed Value='3.28' />
                     <Color Value='20,210,170,145' />
-                    <Size Value='4.1,4.1' />
+                    <Size Value='11.1,11.1' />
                     <Drag Value='0' />
                     <Blend Type='' />
                     <Fade FadeIn='0.22' FadeOut='0.3' MaxFade='0.14' />
                     </ParticleEmitter>
                     <ParticleEmitter ID='ring' NumParticles='26' Texture='fire.png'>
-                    <Emitter Rate='597' Shape='Disc' SpeedShape='Disc' Scale='0,0,0' Speed='1,1,1' />
+                    <Emitter Rate='597' Shape='Disc' SpeedShape='Disc' Scale='5,5,5' Speed='1,1,1' />
                     <Cycle Value='1' />
                     <Sort Value='1' />
                     <Render Value='Billboard' />
@@ -82,75 +82,56 @@ namespace WindowsFormsApplication6
                     <Life Value='6.25' />
                     <Speed Value='1.56' />
                     <Color Value='20,128,128,255' />
-                    <Size Value='3.3,3.3' />
+                    <Size Value='10.3,10.3' />
                     <Drag Value='1' />
                     <Blend Type='Add' />
                     <Fade FadeIn='0.2' FadeOut='0' MaxFade='0.8' />
-                    </ParticleEmitter>
-                    <ParticleEmitter ID='ring' NumParticles='572' Texture='Dust.png'>
-                    <Emitter Rate='602' Shape='Cone' SpeedShape='Cone' Scale='0,1,0' Speed='1,1,1' />
-                    <Cycle Value='1' />
-                    <Sort Value='1' />
-                    <Rotation Speed='1' Time='3' Initial='1' />
-                    <Render Value='Billboard' />
-                    <Gravity Value='0, -1, 0' />
-                    <Force Value='0' OverrideRotation='0' />
-                    <Position Value='0, 0, 0' />
-                    <Life Value='6.25' />
-                    <Speed Value='3.75' />
-                    <Color Value='20,210,170,145' />
-                    <Size Value='4.1,4.1' />
-                    <Drag Value='0' />
-                    <Blend Typ;e='' />
-                    <Fade FadeIn='0.22' FadeOut='0.3' MaxFade='0.13' />
                     </ParticleEmitter>
                     </Particle>";
 
         private void TE_OnFrame()
         {
 
-            DateTime now = DateTime.Now;
+            DateTime now = DateTime.Now; //gets the time at the moment its executed
             TimeSpan timeDifference = now.Subtract(savedTime);
             savedTime = now;
 
             double ftPerSecond = 500.0;
-
-            double distance = ftPerSecond * (timeDifference.Milliseconds / 1000.0);
+            double distance = ftPerSecond * (timeDifference.Milliseconds / 1000.0); 
             for (int i = 0; i < MissileIDs.Count; i++)
             {
                 IPosition66 newPosition = null;
-
                 ITerrainModel66 MissleObj = (ITerrainModel66) globe.Creator.GetObject(MissileIDs[i]);
-                double distanceTo = System.Convert.ToDouble(MissleObj.ClientData["Distancetoground"]);
+                double distanceTo = System.Convert.ToDouble(MissleObj.ClientData["Distancetoground"]); //gets the distance from the missile to the ground
                 if (distanceTo <= distance)
                 {
-                    newPosition = MissleObj.Position.Move(distanceTo, MissleObj.Position.Yaw, MissleObj.Position.Pitch);
-                    newPosition.AltitudeType = AltitudeTypeCode.ATC_ON_TERRAIN;
+                    newPosition = MissleObj.Position.Move(distanceTo, MissleObj.Position.Yaw, MissleObj.Position.Pitch); //moves the missile x amount of feet towards target
+                    newPosition.AltitudeType = AltitudeTypeCode.ATC_ON_TERRAIN; //
                     newPosition.Altitude = 0;
-                    ITerrainEffect66 explo = globe.Creator.CreateEffect(newPosition, EffectsXML = EffectXML, "", "Explosion");
-                    MissileObjects.Add(explo.ID);
-                    ITerrainRegularPolygon66 CircleObj = globe.Creator.CreateCircle(newPosition, 15.0, LineColor = Color.Red, FillColor = Color.Red, "", "Circle");
-                    MissileObjects.Add(CircleObj.ID);
-                    globe.ProjectTree.DeleteItem(MissileIDs[i]);
+                    ITerrainEffect66 explo = globe.Creator.CreateEffect(newPosition, EffectsXML = EffectXML, "", "Explosion"); //creates an explosion effect at the point where the missile hit the terrain
+                    MissileObjects.Add(explo.ID); //adds the effects ID to an array
+                    ITerrainRegularPolygon66 CircleObj = globe.Creator.CreateCircle(newPosition, 15.0, LineColor = Color.Red, FillColor = Color.Red, "", "Circle"); //creates a red circle at the point where the missile hit the terrain
+                    MissileObjects.Add(CircleObj.ID); //adds the circles ID to an array 
+                    globe.ProjectTree.DeleteItem(MissileIDs[i]); //deletes the missile when it has hit the terrain
                     MissileIDs.RemoveAt(i);
                     i--;
+                    
+                    
                 }
                 else
                 {
-                    newPosition = MissleObj.Position.Move(distance, MissleObj.Position.Yaw, MissleObj.Position.Pitch);
+                    newPosition = MissleObj.Position.Move(distance, MissleObj.Position.Yaw, MissleObj.Position.Pitch); //keeps the missile moving till it hits the terrain
                     MissleObj.Position = newPosition;
-                    if (MissleObj.Position.Roll < 359.0)
+                    if (MissleObj.Position.Roll < 359.0) //makes the missile spin as it moves towards the desired target
                     {
-                        MissleObj.Position.Roll += 6.0;
+                        MissleObj.Position.Roll += 9.0; //roll value changes spin speed
                     }
                     else
                     {
 
                         MissleObj.Position.Roll = 0.0;
                     }
-                    //MissleObj.Position.Roll = (MissleObj.Position.Roll < 359.0 ? MissleObj.Position.Roll += 1.0 : 0.0);
-
-
+               
                     MissleObj.ClientData["Distancetoground"] = (distanceTo - distance).ToString();
                 }
 
@@ -168,20 +149,18 @@ namespace WindowsFormsApplication6
 
         private void Fire_(object sender, EventArgs e)
         {
-            var wpt = globe.Window.CenterPixelToWorld(WorldPointType.WPT_TERRAIN);
+            var wpt = globe.Window.CenterPixelToWorld(WorldPointType.WPT_TERRAIN);// gets the position of the camera based on the center pixel of when it was executed
             
-            curPos = globe.Navigate.GetPosition(AltitudeTypeCode.ATC_TERRAIN_ABSOLUTE);
+            curPos = globe.Navigate.GetPosition(AltitudeTypeCode.ATC_TERRAIN_ABSOLUTE);//gets position of camera
             double distanceTo = curPos.DistanceTo(wpt.Position);
 
             string FullPathName;
-
-            //FullPathName = @"C:\Program Files (x86)\Skyline\TerraExplorer Pro\Tools\Data-Library\3D-Objects\AirPlanes\f15.xpc";
             FullPathName = @"C:\Users\Skyline\Desktop\model.dae";
-            ITerrainModel66 MissleObj = globe.Creator.CreateModel(curPos, FullPathName, 5, ModelTypeCode.MT_NORMAL, "", "Missle");
-            MissileIDs.Add(MissleObj.ID);
-            MissleObj.Attachment.AutoDetach = false;
-            MissleObj.Action.Code = ActionCode.AC_FOLLOWBEHIND;
+            ITerrainModel66 MissleObj = globe.Creator.CreateModel(curPos, FullPathName, 5, ModelTypeCode.MT_NORMAL, "", "Missle"); //creates missile model
+            MissleObj.Attachment.AutoDetach = false; 
+            MissleObj.Action.Code = ActionCode.AC_FOLLOWBEHIND; //when you want to follow missile, it follows from behind
             MissleObj.ClientData["Distancetoground"] = distanceTo.ToString();
+            MissileIDs.Add(MissleObj.ID); //adds missile ID to an array
             savedTime = DateTime.Now;
 
         }
@@ -189,7 +168,7 @@ namespace WindowsFormsApplication6
         {
             foreach (var item in MissileObjects)
             {
-                globe.ProjectTree.DeleteItem(item);
+                globe.ProjectTree.DeleteItem(item); //deletes each item in the project tree
             }
             MissileObjects.Clear();
 
